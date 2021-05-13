@@ -5,16 +5,17 @@ If($rsgs -eq $null) { Write-Warning ('No Azure Resource Groups found, script end
 ### Finding vNets within the found Resource Groups ###
 foreach ($rsg in $rsgs){
         Write-Warning ('Starting vNet lookups within ' +  $rsg.ResourceGroupName)
-$vnet = Get-AzVirtualNetwork     -ResourceGroupName $rsg.ResourceGroupName
+$vnet = Get-AzVirtualNetwork -ResourceGroupName $rsg.ResourceGroupName | where {$_.SubnetsText -match "default"}
 If ($vnet -eq $null) {
 Write-Warning ('No Azure Virtual Networks were found in ' + $rsg.ResourceGroupName)
                       }
 else {
-Write-Warning ("Azure Virtual Network found " + "'" + $vnets.Name + "'" + " in " + "'" + $vnets.ResourceGroupName + "'")
+Write-Warning ("Azure Virtual Network found " + "'" + $vnet.Name + "'" + " in " + "'" + $vnet.ResourceGroupName + "'")
 Write-Warning ("Begin Policy creation")
 $policyName = "Block AZ Storage Account Public Access in $($rsg.ResourceGroupName)"
 $policyDescription = "Force Azure Storage Accounts in $($rsg.ResourceGroupName) to block public access and only allow $($vnet.Name)"
 $subnetRSSId = $vnet.Subnets.Id
+
 $policy = @"
 {
     "properties": {
@@ -143,16 +144,17 @@ $policy = @"
       }
      }
     },
-    "id": "/subscriptions/ab2a5b44-4103-4da4-ba84-dd64b13cd1ec/providers/Microsoft.Authorization/policyDefinitions/cde5236e-640e-4f98-ab4e-bc6193347a5f",
+    "id": "/subscriptions/ab1a1b11-1101-1da1-ba67-dd75b15cd2ec/providers/Microsoft.Authorization/policyDefinitions/cde5236e-640e-4f98-ab4e-bc6193347a5f",
     "type": "Microsoft.Authorization/policyDefinitions",
     "name": "cde5236e-640e-4f98-ab4e-bc6193347a5f"
    }
 "@
  
+ Write-Host "Is this null?" $subnetRSSId
 New-AzPolicyDefinition -name $policyName -Metadata '{"category":"Storage"}' -Policy $policy -Description $policyDescription
 $azurePolicy = Get-AzPolicyDefinition -name $policyName
 $allowedSubnets = @{'subnetRssId'= ($subnetRSSId)}
-$allowedSubnets
+$allowedSubnets.subnetRssId | ? {$_ -match "default"}
 New-AzPolicyAssignment -Name $policyName `
   -DisplayName $policyDescription `
   -PolicyDefinition $azurePolicy -PolicyParameterObject $allowedSubnets -AssignIdentity -Location 'USGov Virginia' -Scope $rsg.ResourceID
