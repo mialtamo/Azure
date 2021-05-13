@@ -154,7 +154,7 @@ $policy = @"
 New-AzPolicyDefinition -name $policyName -Metadata '{"category":"Storage"}' -Policy $policy -Description $policyDescription
 $azurePolicy = Get-AzPolicyDefinition -name $policyName
 $allowedSubnets = @{'subnetRssId'= ($subnetRSSId)}
-$allowedSubnets.subnetRssId | ? {$_ -match "default"}
+$allowedSubnets
 New-AzPolicyAssignment -Name $policyName `
   -DisplayName $policyDescription `
   -PolicyDefinition $azurePolicy -PolicyParameterObject $allowedSubnets -AssignIdentity -Location 'USGov Virginia' -Scope $rsg.ResourceID
