@@ -3,7 +3,7 @@
 #Code locks down to specific vnets within a resource group
 #WILL add vnets subnets to storage accounts even if service endpoints are NOT configured.
 
-$rsgs = Get-AzResourceGroup
+$rsgs = Get-AzResourceGroup #-name "<NAME OF A SINGLE RESOURCE GROUP CAN BE USED FOR TESTING.>"
 
 foreach ($rsg in $rsgs){
 $vnets = Get-AzVirtualNetwork -ResourceGroupName $rsg.ResourceGroupName
