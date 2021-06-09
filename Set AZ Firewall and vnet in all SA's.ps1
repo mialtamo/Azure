@@ -89,6 +89,6 @@ Write-Host "********************************************************************
     else{
   Write-Host  "Incorrect Option Specified" -ForegroundColor red
 }
-} Until ($passive -match "y" -or $passive -match "n") #End Do Loop
+} Until ($passive -match "P" -or $passive -match "E") #End Do Loop
 
 }#end Function
