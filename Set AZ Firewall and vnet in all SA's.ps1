@@ -16,14 +16,14 @@ Do
     If ($passive -match "I"){
 Write-Host "Information: By selecting passive scanning it will simply report findings and not attempt to make any changes to storage accounts or virtual networks in ANY capacity. If you select Enforce you will being making the necessary changes discovered in passive Mode. " -ForegroundColor Green
                             }
-elseIf ($passive -match "E")
+                            elseIf ($passive -match "E")
                                 {
                                         Write-Host "This scan will NOT be passive. Ctrl+C to stop this before countdown" -ForegroundColor red
                                         $delay = 10
                                         $addEndPoint = @("Microsoft.Storage")
                                         $enforcedvn = 0
                                         [System.Collections.ArrayList]$global:vnetSubRules=@()
-                                       $filtered=@()
+                                        [System.Collections.ArrayList]$global:vnetSubhash=@()
                                         while ($delay -ge 0){
                                             Write-Host "Seconds Remaining: $($delay)" -ForegroundColor red
                                             start-sleep 1
@@ -74,6 +74,22 @@ foreach ($DiscoveredVN in $DiscoveredVNs)
                                                                     elseIf($DiscoveredSAs.Count -gt 0)
                                                                         {
                                                                 Write-Host "[ENFORCE] Storage Accounts previously discovered" -ForegroundColor red
+                                                                                foreach ($DiscoveredSa in $DiscoveredSAs)
+                                                                                {
+                                                                                Write-Host " "
+                                                                                Write-Host "[ENFORCE] Checking if those Storage Accounts have Virtual Networks within their own Resouce Group" -ForegroundColor red
+                                                                                $vnets = Get-AZVirtualNetwork -ResourceGroupName $DiscoveredSa.ResourceGroupName
+                                                                                Write-Host "[ENFORCE] This Virtual Network < $($vnets.name -join ",") > was found for Storage Account < $($DiscoveredSA.StorageAccountName) > within the Resource Group < $($DiscoveredSA.ResourceGroupName) >" -ForegroundColor red
+                                                                                Write-Host "[ENFORCE] Attempting to add these Virtual Networks < $($vnets.name -join ",") > to Storage Account < $($DiscoveredSA.StorageAccountName) >..." -ForegroundColor red
+                                                                                foreach($vnetsub in $vnets.subnets){
+                                                                                    $global:vnetSubhash += @{
+                                                                                        "VirtualNetworkResourceId" = $vnetSub.Id
+                                                                                        "Action" = "allow"
+                                                                                    }
+                                                                                } #end foreach on vnetsub
+                                                                                $updateNetworkRules = Update-AzStorageAccountNetworkRuleSet -ResourceGroupName $DiscoveredSA.ResourceGroupName -AccountName $DiscoveredSA.StorageAccountName -Bypass AzureServices,Logging,Metrics -IpRule $publicIpRules -DefaultAction Deny -VirtualNetworkRule ($vnetSubhash | ? {$_.Values -match $DiscoveredSA.ResourceGroupName}) #-WarningAction:SilentlyContinue
+                                                                                } #end foreach DiscoverdSA
+                                                                                Write-Host "[ENFORCE] Finished" -ForegroundColor green
                                                                                         }
                                                             elseIf ($DiscoveredVNs.Count -gt 0)
                                                                                 {
@@ -97,11 +113,15 @@ elseIf ($passive -match "P")
                                 {
 Write-Host "[PASSIVE] Passive Scan selected, this will simply report findings" -ForegroundColor green
  #Loop through each resource group
+$subs = Get-AzSubscription
 $rsgs = Get-AzResourceGroup
 $foundSA = 0
 $foundVN = 0
 $global:DiscoveredSAs=@()
 $global:DiscoveredVNs=@()
+#foreach($sub in $subs)
+#{
+    Write-Host = "[PASSIVE] Checking in the Subscription named < $($sub.Name) >" -ForegroundColor blue
             foreach ($rsg in $rsgs)
                     {
 Write-Host "[PASSIVE] Scanning the current Azure Resource Group named ..... < $($rsg.ResourceGroupName) > for any Storage Accounts where the firewall is set to (ALLOW) and for any Virtual Networks where the Microsoft.Storage Service Endpoint is missing" -ForegroundColor green
@@ -147,6 +167,7 @@ $azureSAs = Get-AzStorageAccount -ResourceGroupName $rsg.ResourceGroupName | whe
                                                             Write-Host "[PASSIVE] No Storage Account was discovered" -ForegroundColor red
                                                     }
                         }#End RSG Foreach Loop
+                    #}#End SUB foreach Loop
 Write-Host "[PASSIVE] Passive Scanning Complete...." -ForegroundColor Blue
 Write-Host "[PASSIVE] Building Report....Standby" -ForegroundColor Blue
 start-sleep 2
@@ -167,15 +188,6 @@ Write-Host "********************************************************************
                         Write-Host  "Incorrect Option Specified" -ForegroundColor red
                         }
             } Until ($passive -match "P" -or $passive -match "E") #End Do Loop
+        
 }#end Function
 Start-AzSAFWConfig
-
-[System.Collections.ArrayList]$filtered = @()
-foreach($vnetrule in $vnetsubrules)
-{
-    If ($vnetrule.Value -match "Test-RSG")
-    {
-    $filtered = $filtered += $vnetrule
-    }
-}
-$filtered
