@@ -7,7 +7,7 @@ Write-Host " "
 Write-Host "To Begin run Start-AZStorageScan" -ForegroundColor Blue
 Write-Host " "
 Write-Host "MODULE REQUIREMENTS: AZ.RESOURCES, AZ.NETWORK AZ STORAGE" -ForegroundColor Blue
-Write-Host "WARNING: USE THIS SCRIPT AT YOUR OWN RISK. "
+Write-Host "WARNING: USE THIS SCRIPT AT YOUR OWN RISK. " -foregroundcolor Red
 Write-Host " "
 Write-Host "*************************************************************************************************" -ForegroundColor Blue
 [System.Collections.ArrayList]$global:vnetSubhash=@()
