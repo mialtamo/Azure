@@ -1,5 +1,4 @@
 #Connect-AzAccount
-Select-AzSubscription -SubscriptionName ES-CS-CUS-EXT-mialtamo
 Write-Host "*************************************************************************************************" -ForegroundColor blue
 Write-Host " "
 Write-Host "Welcome to the Azure Storage Account Firewall Activation and Virtual Network Configuration System" -ForegroundColor blue
